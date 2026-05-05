@@ -3,10 +3,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <TFT_eSPI.h>
-
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
-const char* serverUrl = "http://192.168.1.193:8000/nowplaying"; // 본인 맥 IP 입력
+#include "env.cpp" // WiFi 정보와 서버 URL을 별도의 파일로 분리
 
 TFT_eSPI tft = TFT_eSPI();
 
