@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pyobjc-core
+pyobjc-framework-MediaPlayer
+pyobjc-framework-Cocoa
