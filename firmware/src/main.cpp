@@ -3,7 +3,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <TFT_eSPI.h>
-#include "env.cpp" // WiFi 정보와 서버 URL을 별도의 파일로 분리
+#include "env.h"
 
 TFT_eSPI tft = TFT_eSPI();
 
