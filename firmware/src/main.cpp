@@ -31,10 +31,8 @@ void drawWrappedText(const char* text, int x, int y, int maxWidth, int lineHeigh
         while (startIdx + charCount < str.length()) {
             unsigned char c = (unsigned char)str[startIdx + charCount];
             int charWidth, step;
-            if (c < 128) { charWidth = 9; step = 1; }
-            else if ((c & 0xE0) == 0xC0) { charWidth = 16; step = 2; }
-            else if ((c & 0xF0) == 0xE0) { charWidth = 16; step = 3; }
-            else { charWidth = 16; step = 4; }
+            if (c < 128) { charWidth = 8; step = 1; } // 좁은 영역에 맞춰 폰트폭 조정
+            else { charWidth = 16; step = 3; }
             if (currentWidth + charWidth > maxWidth) break;
             currentWidth += charWidth;
             charCount += step;
@@ -44,7 +42,7 @@ void drawWrappedText(const char* text, int x, int y, int maxWidth, int lineHeigh
         u8f.print(str.substring(startIdx, startIdx + charCount));
         startIdx += charCount;
         currentY += lineHeight;
-        if (currentY > 235) break; 
+        if (currentY > 230) break; 
     }
 }
 
@@ -52,30 +50,18 @@ void setup() {
     Serial.begin(115200);
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH); 
-
     tft.init();
     tft.setRotation(1); 
-    
-    // 색상 반전 해결 (필요 시 true/false 변경)
     tft.invertDisplay(true); 
-    
     tft.fillScreen(TFT_BLACK);
-
     u8f.begin(tft); 
     u8f.setFontMode(1); 
-    u8f.setFont(u8g2_font_unifont_t_korean2); 
-    u8f.setForegroundColor(TFT_WHITE);
-    
     TJpgDec.setCallback(tft_output);
     TJpgDec.setSwapBytes(true);
-
     String base = String(serverUrl);
     artworkUrl = base.substring(0, base.lastIndexOf("/")) + "/artwork";
-
-    u8f.setCursor(10, 40);
-    u8f.print("와이파이 연결 중...");
     WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+    while (WiFi.status() != WL_CONNECTED) { delay(500); }
     tft.fillScreen(TFT_BLACK);
 }
 
@@ -91,14 +77,11 @@ void fetchAndDrawArtwork() {
                 WiFiClient* stream = http.getStreamPtr();
                 int read = 0;
                 while (http.connected() && read < len) {
-                    size_t size = stream->available();
-                    if (size) {
-                        int r = stream->readBytes(&buff[read], size);
-                        read += r;
-                    }
+                    size_t s = stream->available();
+                    if (s) read += stream->readBytes(&buff[read], s);
                 }
-                // 320x240 화면에서 240x240 아트를 가로 중앙(x=40)에 배치
-                TJpgDec.drawJpg(40, 0, buff, len);
+                // 왼쪽 (0, 20)에 200x200 아트워크 배치
+                TJpgDec.drawJpg(0, 20, buff, len);
                 free(buff);
             }
         }
@@ -115,27 +98,24 @@ void loop() {
             String payload = http.getString();
             JsonDocument doc;
             deserializeJson(doc, payload);
-
             String title = doc["title"];
             String artist = doc["artist"];
             bool hasArtwork = doc["has_artwork"];
 
             if (title != lastTitle) {
                 tft.fillScreen(TFT_BLACK);
-                if (hasArtwork) {
-                    fetchAndDrawArtwork();
-                }
+                if (hasArtwork) fetchAndDrawArtwork();
                 
-                // 정보 출력 영역 (아래쪽 겹치지 않게 하단 오버레이)
-                // 240x240 아트가 0~240 높이를 차지하므로, 
-                // 하단 60픽셀 정도에 반투명 느낌으로 검은색 바를 깔고 정보 출력
-                tft.fillRect(0, 180, 320, 60, TFT_BLACK); 
+                // 오른쪽 영역 (210 ~ 320) 정보 표시
                 u8f.setFont(u8g2_font_unifont_t_korean2);
                 u8f.setForegroundColor(TFT_WHITE);
-                drawWrappedText(title.c_str(), 10, 200, 300, 20);
+                // 제목 출력
+                drawWrappedText(title.c_str(), 210, 40, 105, 25);
+                
+                // 아티스트 출력 (구분선 느낌으로 약간 띄움)
                 u8f.setForegroundColor(TFT_YELLOW);
-                u8f.setCursor(10, 235);
-                u8f.print(artist);
+                u8f.setCursor(210, 180);
+                drawWrappedText(artist.c_str(), 210, 180, 105, 20);
                 
                 lastTitle = title;
             }
